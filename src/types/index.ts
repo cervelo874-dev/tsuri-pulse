@@ -39,6 +39,8 @@ export interface FishingSpot {
   seaDirectionDeg: number;
   isPreset?: boolean;
   description?: string;
+  /** 検索用の読み仮名・別名キーワード */
+  keywords?: string;
 }
 
 export interface HarmonicConstituents {

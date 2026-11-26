@@ -26,7 +26,7 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
   const {
     selectedGenre,
     selectedHour,
-    setSelectedHour,
+    jumpToCurrentHour,
     isManualHour,
     resetToAutoHour,
     isLoadingForecast,
@@ -95,10 +95,18 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             </div>
           )}
 
-          {/* 時刻インジケーター（横なぞり連動表示） */}
-          <div className="w-full flex items-center justify-end gap-1 text-[10px] font-bold opacity-85">
-            <span className="glass-pill px-2 py-0.5 rounded-full">
-              {String(selectedHour).padStart(2, '0')}:00 時点
+          {/* 時刻インジケーター（初期＆タブ選択時は最高スコア時刻を表示、なぞり時は選択時刻を明示） */}
+          <div className="w-full flex items-center justify-end gap-1 text-[10px] font-bold">
+            <span
+              className={`px-2 py-0.5 rounded-full ${
+                isManualHour
+                  ? 'bg-amber-500/20 border border-amber-400/50 text-amber-300'
+                  : 'glass-pill opacity-90'
+              }`}
+            >
+              {isManualHour
+                ? `🕒 ${String(selectedHour).padStart(2, '0')}:00 時点`
+                : `🔥 最高時(${String(selectedHour).padStart(2, '0')}:00)`}
             </span>
           </div>
 
@@ -214,7 +222,9 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                   </span>
                 ) : (
                   <span className="text-[11px] font-bold opacity-75">
-                    {cfg.shortName}（最高{currentGenreEval.peakScore}点）
+                    {isManualHour
+                      ? `${cfg.shortName}（最高${currentGenreEval.peakScore}点）`
+                      : `${cfg.shortName}・当日ピーク`}
                   </span>
                 )}
               </div>
@@ -267,7 +277,7 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             <Sonamaru mood={effectiveMood} size="md" />
           </div>
 
-          {/* AI作戦会議ボタン ＋ ピーク時刻ジャンプ */}
+          {/* AI作戦会議ボタン ＋ 現在時刻/最高スコア切替 */}
           <div className="w-full space-y-1.5">
             <button
               id="ai-strategy-btn"
@@ -283,18 +293,19 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
               <button
                 type="button"
                 onClick={resetToAutoHour}
-                className="w-full glass-pill py-1.5 px-2 rounded-full text-[10px] font-bold flex items-center justify-center gap-1 opacity-85 hover:opacity-100"
+                className="w-full glass-pill py-1.5 px-2 rounded-full text-[10px] font-bold flex items-center justify-center gap-1 opacity-90 hover:opacity-100"
               >
                 <RotateCcw className="w-3 h-3" />
-                <span>現在/ピーク時刻へ戻す</span>
+                <span>最高スコア({currentGenreEval.peakScore}点)へ戻す</span>
               </button>
             ) : (
               <button
                 type="button"
-                onClick={() => setSelectedHour(currentGenreEval.peakHour, true)}
-                className="w-full glass-pill py-1.5 px-2 rounded-full text-[10px] font-bold opacity-80 hover:opacity-100"
+                onClick={jumpToCurrentHour}
+                className="w-full glass-pill py-1.5 px-2 rounded-full text-[10px] font-bold flex items-center justify-center gap-1 opacity-85 hover:opacity-100"
               >
-                ピーク {String(currentGenreEval.peakHour).padStart(2, '0')}:00 を見る
+                <Clock className="w-3 h-3" />
+                <span>いま現在の時刻を見る</span>
               </button>
             )}
           </div>

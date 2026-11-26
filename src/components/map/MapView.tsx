@@ -22,6 +22,10 @@ import {
 import { useApp } from '@/context/AppContext';
 import DirectionDial from '@/components/map/DirectionDial';
 import type { MapTileMode } from '@/components/map/LeafletMapInner';
+import {
+  searchJapanPlacesOnline,
+  searchLocalSpotCatalog,
+} from '@/lib/geocoder';
 import { evaluateAllGenresForDay } from '@/lib/scoringEngine';
 import { calcDistanceKm, computeDailyTide, findNearestPort } from '@/lib/tideEngine';
 import {
@@ -41,13 +45,6 @@ const LeafletMapInner = dynamic(() => import('@/components/map/LeafletMapInner')
     </div>
   ),
 });
-
-interface NominatimItem {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-}
 
 export default function MapView() {
   const {
@@ -104,59 +101,35 @@ export default function MapView() {
     };
   }, [probeSpot.lat, probeSpot.lon]);
 
-  // 内蔵カタログの0秒ローカルフィルタ
-  const localMatches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return NATIONWIDE_SPOT_CATALOG.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) || s.area.toLowerCase().includes(q)
-    ).slice(0, 6);
-  }, [query]);
+  // 内蔵カタログの0秒ローカルフィルタ（漢字・ひらがな・カタカナ・通称対応）
+  const localMatches = useMemo(() => searchLocalSpotCatalog(query), [query]);
 
-  // Nominatim API（無料ジオコーディング）デバウンス検索
+  // 国土地理院 ジオコーディングAPI ＋ Nominatim ハイブリッド検索（「〇〇漁港」等の接尾辞自動補完対応）
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
       return;
     }
 
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsSearching(true);
+      const timeoutId = setTimeout(() => controller.abort(), 5500);
       try {
-        const controller = new AbortController();
-        const tId = setTimeout(() => controller.abort(), 4500);
-        const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=5&q=${encodeURIComponent(
-          q
-        )}`;
-        const res = await fetch(url, {
-          signal: controller.signal,
-          headers: { 'Accept-Language': 'ja' },
-        });
-        clearTimeout(tId);
-        if (res.ok) {
-          const items = (await res.json()) as NominatimItem[];
-          const mapped: FishingSpot[] = items.map((it) => {
-            const parts = it.display_name.split(',').map((p) => p.trim());
-            return {
-              id: `nom-${it.place_id}`,
-              name: parts[0] || q,
-              area: parts.slice(1, 3).reverse().join(' '),
-              lat: Math.round(Number(it.lat) * 10000) / 10000,
-              lon: Math.round(Number(it.lon) * 10000) / 10000,
-              seaDirectionDeg: 180,
-            };
-          });
-          setRemoteResults(mapped);
-        }
+        const places = await searchJapanPlacesOnline(q, controller.signal);
+        setRemoteResults(places);
       } catch {
         // オフライン時は内蔵辞書のみでスムーズに継続
       } finally {
+        clearTimeout(timeoutId);
         setIsSearching(false);
       }
-    }, 380);
+    }, 280);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query]);
 
   const combinedResults = useMemo(() => {
@@ -170,7 +143,7 @@ export default function MapView() {
         merged.push(item);
       }
     }
-    return merged.slice(0, 8);
+    return merged.slice(0, 10);
   }, [localMatches, query, remoteResults]);
 
   // マップ上の任意海辺タップ時
@@ -326,48 +299,87 @@ export default function MapView() {
       />
 
       {/* 上部オーバーレイ: 検索バー＋現在地＋タイル切替＋エリアショートカット */}
-      <div className="absolute top-3 left-3 right-3 z-20 space-y-2 pointer-events-none">
+      <div
+        className="absolute top-3 left-3 right-3 z-20 space-y-2 pointer-events-none"
+        onPointerDown={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center gap-2 pointer-events-auto">
           <div className="relative flex-1">
-            <div className="glass-panel-strong rounded-full h-11 px-3.5 flex items-center gap-2">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setSearchFocused(true);
+                if (combinedResults.length > 0) {
+                  handleJumpToSpot(combinedResults[0], 14);
+                  return;
+                }
+                const q = query.trim();
+                if (!q) return;
+                setIsSearching(true);
+                const ctrl = new AbortController();
+                const tId = setTimeout(() => ctrl.abort(), 5500);
+                try {
+                  const places = await searchJapanPlacesOnline(q, ctrl.signal);
+                  setRemoteResults(places);
+                  if (places.length > 0) {
+                    handleJumpToSpot(places[0], 14);
+                  }
+                } finally {
+                  clearTimeout(tId);
+                  setIsSearching(false);
+                }
+              }}
+              className="glass-panel-strong rounded-full h-11 px-3.5 flex items-center gap-2"
+            >
               <Search className="w-4 h-4 shrink-0 opacity-75" />
               <input
                 id="map-search-input"
-                type="text"
+                type="search"
+                enterKeyHint="search"
                 value={query}
                 onFocus={() => setSearchFocused(true)}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="全国の港・地名・駅名を検索..."
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setSearchFocused(true);
+                }}
+                placeholder="漁港・港・地名を検索（例：炬口漁港、たけのくち）"
                 className="w-full bg-transparent text-sm outline-none placeholder:opacity-60"
               />
               {query && (
                 <button
                   type="button"
-                  onClick={() => setQuery('')}
+                  onClick={() => {
+                    setQuery('');
+                    setRemoteResults([]);
+                  }}
                   className="p-1 opacity-70 hover:opacity-100"
+                  aria-label="検索文字をクリア"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
-            </div>
+            </form>
 
             {/* 検索サジェスト一覧 */}
-            {searchFocused && (query.trim().length > 0 || combinedResults.length > 0) && (
-              <div className="absolute left-0 right-0 mt-1.5 rounded-2xl glass-panel-strong p-1.5 max-h-60 overflow-y-auto shadow-2xl">
+            {searchFocused && query.trim().length > 0 && (
+              <div className="absolute left-0 right-0 mt-1.5 rounded-2xl glass-panel-strong p-1.5 max-h-64 overflow-y-auto shadow-2xl">
                 {isSearching && combinedResults.length === 0 && (
-                  <div className="px-3 py-2.5 text-xs opacity-75">検索中...</div>
+                  <div className="px-3 py-2.5 text-xs opacity-75">
+                    全国の漁港・地名データを検索中...
+                  </div>
                 )}
                 {!isSearching && combinedResults.length === 0 && (
                   <div className="px-3 py-2.5 text-xs opacity-75">
-                    候補が見つかりません。地図を直接タップしても調査できます！
+                    候補が見つかりません。市町村名（例：洲本市）や地図タップでも調査できます！
                   </div>
                 )}
                 {combinedResults.map((spot) => (
                   <button
                     key={spot.id}
                     type="button"
-                    onClick={() => handleJumpToSpot(spot, 13)}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-cyan-500/15 transition flex items-center justify-between gap-2"
+                    onClick={() => handleJumpToSpot(spot, 14)}
+                    className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-cyan-500/15 transition flex items-center justify-between gap-2"
                   >
                     <div className="min-w-0">
                       <div className="text-xs font-bold truncate">{spot.name}</div>

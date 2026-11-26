@@ -83,7 +83,7 @@ export default function FishTabs() {
               <FishGenreSilhouette genreId={cfg.id} color={cfg.accentColor} />
               <span className="whitespace-nowrap">{cfg.fullName}</span>
               <span
-                className="text-[11px] font-black ml-0.5 opacity-90"
+                className="text-[11px] font-black ml-0.5 opacity-95 whitespace-nowrap"
                 style={{
                   color:
                     peak >= 80
@@ -93,7 +93,7 @@ export default function FishTabs() {
                       : 'var(--text-dim)',
                 }}
               >
-                {peak}
+                {peak}点
               </span>
             </button>
           );

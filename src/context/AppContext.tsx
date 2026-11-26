@@ -76,6 +76,7 @@ interface AppContextValue {
 
   selectedHour: number;
   setSelectedHour: (hour: number, isManual?: boolean) => void;
+  jumpToCurrentHour: () => void;
   resetToAutoHour: () => void;
   isManualHour: boolean;
 
@@ -120,8 +121,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeSpot, setActiveSpot] = useState<FishingSpot>(INITIAL_PRESET_SPOTS[0]);
 
   const [dayIndex, setDayIndexState] = useState<number>(0);
-  const [selectedGenre, setSelectedGenre] = useState<FishGenreId>('sabiki');
-  const [selectedHour, setSelectedHourState] = useState<number>(6);
+  const [selectedGenre, setSelectedGenreState] = useState<FishGenreId>('sabiki');
+  const [selectedHourState, setSelectedHourState] = useState<number>(6);
   const [isManualHour, setIsManualHour] = useState<boolean>(false);
 
   const [forecastBundle, setForecastBundle] = useState<SpotForecastBundle>(() =>
@@ -139,7 +140,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [catchLogs, setCatchLogs] = useState<CatchLogEntry[]>([]);
   const [celebrationTrigger, setCelebrationTrigger] = useState<number>(0);
 
-  // 初期マウント時にLocalStorage & IndexedDBおよび現在JST時刻を非同期読み込み
+  // 初期マウント時にLocalStorage & IndexedDBを非同期読み込み
   useEffect(() => {
     let active = true;
     loadAllPhotosFromIdb().then((photoMap) => {
@@ -150,7 +151,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const loadedWxGear = loadWeatherGearChecked();
       const loadedLogs = loadCatchLogsMeta();
 
-      setSelectedHourState(getCurrentJstHour());
       setSettings(loadedSettings);
       setMySpots(loadedSpots);
       if (loadedSpots.length > 0) {
@@ -231,6 +231,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const selectSpot = useCallback((spot: FishingSpot) => {
     setActiveSpot(spot);
+    setIsManualHour(false);
+  }, []);
+
+  const setSelectedGenre = useCallback((genre: FishGenreId) => {
+    setSelectedGenreState(genre);
+    // 魚種タブをクリックした際は、タブに表示されている最高スコア時刻へ自動フォーカスし数値を一致させる
+    setIsManualHour(false);
   }, []);
 
   const saveSpotToMySpots = useCallback((spot: FishingSpot) => {
@@ -244,6 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     setActiveSpot(spot);
+    setIsManualHour(false);
   }, []);
 
   const updateSpotSeaDirection = useCallback((spotId: string, seaDirectionDeg: number) => {
@@ -292,18 +300,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const currentGenreEval = genreEvaluations[selectedGenre];
 
-  const setDayIndex = useCallback(
-    (idx: number) => {
-      setDayIndexState(idx);
-      setIsManualHour(false);
-      if (idx === 0) {
-        setSelectedHourState(getCurrentJstHour());
-      } else {
-        setSelectedHourState(6); // 翌日以降は初期表示として朝マズメ6時を選択
-      }
-    },
-    []
-  );
+  const setDayIndex = useCallback((idx: number) => {
+    setDayIndexState(idx);
+    setIsManualHour(false);
+  }, []);
 
   const setSelectedHour = useCallback((hour: number, isManual = true) => {
     const clamped = Math.max(0, Math.min(23, Math.round(hour)));
@@ -311,17 +311,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsManualHour(isManual);
   }, []);
 
+  const jumpToCurrentHour = useCallback(() => {
+    setSelectedHourState(getCurrentJstHour());
+    setIsManualHour(true);
+  }, []);
+
   const resetToAutoHour = useCallback(() => {
     setIsManualHour(false);
-    if (dayIndex === 0) {
-      setSelectedHourState(getCurrentJstHour());
-    } else {
-      setSelectedHourState(currentGenreEval.peakHour);
-    }
-  }, [dayIndex, currentGenreEval.peakHour]);
+  }, []);
+
+  // 初期表示および魚種タブ選択時(!isManualHour)は当該魚種の最高スコア時刻を返すことでタブ数値と完全一致させる
+  const effectiveHour = isManualHour
+    ? selectedHourState
+    : currentGenreEval.peakHour;
 
   const currentHourScore =
-    currentGenreEval.hourlyScores[selectedHour] ?? currentGenreEval.hourlyScores[0];
+    currentGenreEval.hourlyScores[effectiveHour] ?? currentGenreEval.hourlyScores[0];
 
   // =====================================================
   // 持ち物アクション
@@ -477,8 +482,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDayIndex,
     selectedGenre,
     setSelectedGenre,
-    selectedHour,
+    selectedHour: effectiveHour,
     setSelectedHour,
+    jumpToCurrentHour,
     resetToAutoHour,
     isManualHour,
     isLoadingForecast,

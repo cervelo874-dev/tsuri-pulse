@@ -1,0 +1,25 @@
+{
+  "name": "ツリパルス（TsuriPulse）",
+  "short_name": "ツリパルス",
+  "description": "場所を選ぶだけで天気・風速・風向・潮の動き・釣れる時間・持ち物がパッと見でわかる近未来釣りダッシュボード",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#041529",
+  "theme_color": "#041529",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

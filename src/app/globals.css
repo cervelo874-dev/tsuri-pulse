@@ -1,0 +1,297 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* =========================================================
+   TsuriPulse Design System: Pop & Cute × Futuristic SF Gadget
+   Two One-Tap Themes: Night (Standard) & Sunlight (Outdoor)
+   ========================================================= */
+
+:root,
+:root[data-theme="night"] {
+  --bg-deep: #030e1c;
+  --bg-gradient:
+    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(0, 212, 255, 0.22), transparent 65%),
+    radial-gradient(ellipse 70% 50% at 85% 25%, rgba(14, 165, 233, 0.14), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 15% 85%, rgba(6, 182, 212, 0.12), transparent 65%),
+    linear-gradient(180deg, #041529 0%, #061c33 48%, #030e1c 100%);
+
+  --glass-bg: rgba(9, 30, 54, 0.62);
+  --glass-bg-strong: rgba(8, 26, 48, 0.84);
+  --glass-bg-subtle: rgba(14, 42, 72, 0.45);
+  --glass-border: rgba(56, 224, 255, 0.28);
+  --glass-border-strong: rgba(56, 224, 255, 0.58);
+  --glass-shadow:
+    0 10px 30px -6px rgba(0, 8, 20, 0.65),
+    inset 0 1px 0 0 rgba(165, 243, 252, 0.18);
+
+  --text-primary: #f0f9ff;
+  --text-secondary: #bae6fd;
+  --text-muted: #7dd3fc;
+  --text-dim: rgba(186, 230, 253, 0.62);
+
+  --accent-cyan: #22d3ee;
+  --accent-cyan-strong: #00e5ff;
+  --accent-cyan-soft: rgba(34, 211, 238, 0.18);
+  --accent-gold: #fbbf24;
+  --accent-gold-soft: rgba(251, 191, 36, 0.2);
+  --accent-emerald: #34d399;
+  --accent-coral: #fb7185;
+  --accent-amber: #f59e0b;
+
+  --nav-bg: rgba(6, 22, 42, 0.88);
+  --input-bg: rgba(5, 19, 36, 0.72);
+  --chip-bg: rgba(14, 46, 78, 0.65);
+  --modal-backdrop: rgba(2, 8, 18, 0.76);
+
+  --tide-stroke: #22d3ee;
+  --tide-fill-top: rgba(34, 211, 238, 0.36);
+  --tide-fill-bottom: rgba(34, 211, 238, 0.02);
+  --radar-grid: rgba(56, 224, 255, 0.24);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="sunlight"] {
+  --bg-deep: #d8f0ff;
+  --bg-gradient:
+    radial-gradient(ellipse 95% 50% at 50% -5%, rgba(56, 189, 248, 0.38), transparent 65%),
+    radial-gradient(ellipse 75% 55% at 90% 20%, rgba(125, 211, 252, 0.35), transparent 60%),
+    linear-gradient(180deg, #bfe4ff 0%, #ddf1ff 42%, #eff8ff 100%);
+
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-bg-strong: rgba(255, 255, 255, 0.93);
+  --glass-bg-subtle: rgba(240, 249, 255, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.92);
+  --glass-border-strong: rgba(2, 132, 199, 0.55);
+  --glass-shadow:
+    0 10px 26px -6px rgba(3, 105, 161, 0.16),
+    0 2px 8px -2px rgba(2, 132, 199, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+
+  --text-primary: #07213a;
+  --text-secondary: #0f3a5d;
+  --text-muted: #0369a1;
+  --text-dim: rgba(15, 58, 93, 0.68);
+
+  --accent-cyan: #0284c7;
+  --accent-cyan-strong: #0369a1;
+  --accent-cyan-soft: rgba(2, 132, 199, 0.14);
+  --accent-gold: #ea580c;
+  --accent-gold-soft: rgba(234, 88, 12, 0.16);
+  --accent-emerald: #059669;
+  --accent-coral: #e11d48;
+  --accent-amber: #d97706;
+
+  --nav-bg: rgba(245, 251, 255, 0.92);
+  --input-bg: rgba(255, 255, 255, 0.88);
+  --chip-bg: rgba(224, 242, 254, 0.85);
+  --modal-backdrop: rgba(7, 33, 58, 0.45);
+
+  --tide-stroke: #0284c7;
+  --tide-fill-top: rgba(14, 165, 233, 0.34);
+  --tide-fill-bottom: rgba(14, 165, 233, 0.03);
+  --radar-grid: rgba(2, 132, 199, 0.25);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  background-color: var(--bg-deep);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family:
+    "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans",
+    "BIZ UDPGothic",
+    "Noto Sans JP",
+    "Yu Gothic UI",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Surface Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-panel-strong {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(22px) saturate(165%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-pill {
+  background: var(--chip-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+/* Fish Tab Glow States */
+.glow-gold {
+  border-color: #fbbf24 !important;
+  box-shadow:
+    0 0 16px rgba(251, 191, 36, 0.48),
+    inset 0 0 10px rgba(251, 191, 36, 0.2);
+}
+
+:root[data-theme="sunlight"] .glow-gold {
+  border-color: #f59e0b !important;
+  box-shadow:
+    0 4px 14px rgba(245, 158, 11, 0.36),
+    inset 0 0 8px rgba(251, 191, 36, 0.22);
+}
+
+.glow-cyan {
+  border-color: #22d3ee !important;
+  box-shadow:
+    0 0 15px rgba(34, 211, 238, 0.44),
+    inset 0 0 10px rgba(34, 211, 238, 0.18);
+}
+
+:root[data-theme="sunlight"] .glow-cyan {
+  border-color: #0284c7 !important;
+  box-shadow:
+    0 4px 14px rgba(2, 132, 199, 0.28),
+    inset 0 0 8px rgba(14, 165, 233, 0.16);
+}
+
+.glow-button-cyan {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.34), rgba(14, 165, 233, 0.52));
+  border: 1px solid rgba(103, 232, 249, 0.72);
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+:root[data-theme="sunlight"] .glow-button-cyan {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.34);
+}
+
+/* Hide scrollbars cleanly on horizontal chip rails */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Sonamaru Animations */
+@keyframes sonamaru-float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1.5deg);
+  }
+}
+
+@keyframes sonamaru-hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  28% {
+    transform: translateY(-16px) scale(1.08, 0.95) rotate(-4deg);
+  }
+  58% {
+    transform: translateY(2px) scale(0.96, 1.04) rotate(3deg);
+  }
+  80% {
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sonar-ripple {
+  0% {
+    transform: scale(0.45);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.78;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-sonamaru-float {
+  animation: sonamaru-float 3.4s ease-in-out infinite;
+}
+
+.animate-sonamaru-hop {
+  animation: sonamaru-hop 0.58s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-sonar-ripple {
+  animation: sonar-ripple 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Leaflet Theme Styling */
+.leaflet-container {
+  font-family: inherit;
+  background: #061b31;
+}
+
+:root[data-theme="sunlight"] .leaflet-container {
+  background: #9dd8ff;
+}
+
+:root[data-theme="night"] .map-tiles-themed {
+  filter: invert(92%) hue-rotate(175deg) saturate(160%) brightness(78%) contrast(112%);
+}
+
+:root[data-theme="sunlight"] .map-tiles-themed {
+  filter: saturate(125%) hue-rotate(-6deg) brightness(103%) contrast(98%);
+}
+
+.leaflet-control-attribution {
+  font-size: 10px !important;
+  background: rgba(8, 25, 45, 0.65) !important;
+  color: rgba(186, 230, 253, 0.75) !important;
+  backdrop-filter: blur(6px);
+  border-radius: 6px 0 0 0;
+}
+
+:root[data-theme="sunlight"] .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.75) !important;
+  color: #0f3a5d !important;
+}
+
+.leaflet-control-attribution a {
+  color: inherit !important;
+}

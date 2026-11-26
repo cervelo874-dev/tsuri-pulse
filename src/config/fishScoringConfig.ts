@@ -58,7 +58,8 @@ export const FISH_SCORING_CONFIG: Record<FishGenreId, FishGenreConfig> = {
     penaltyWindMs: 5.0,
     idealWaveRangeM: [0.1, 0.6],
     maxSafeWaveM: 1.0,
-    beginnerTip: 'アミエビの煙幕に群れを寄せる釣り！朝夕マズメに潮が程よく動くタイミングが最大のチャンスです。',
+    beginnerTip:
+      'アミエビの煙幕に群れを寄せる釣りです。朝夕マズメに潮が程よく動くタイミングが最大のチャンスになります。',
   },
 
   bluefish: {
@@ -77,7 +78,8 @@ export const FISH_SCORING_CONFIG: Record<FishGenreId, FishGenreConfig> = {
     penaltyWindMs: 6.0,
     idealWaveRangeM: [0.3, 0.85],
     maxSafeWaveM: 1.3,
-    beginnerTip: '朝マズメの回遊と「潮がしっかり走る時間」が最優先！追い風ならメタルジグの飛距離が伸びて圧倒的有利です。',
+    beginnerTip:
+      '朝マズメの回遊と潮がしっかり走る時間帯が最優先です。追い風ならメタルジグの飛距離が伸びて有利になります。',
   },
 
   chinu: {
@@ -96,7 +98,8 @@ export const FISH_SCORING_CONFIG: Record<FishGenreId, FishGenreConfig> = {
     penaltyWindMs: 5.5,
     idealWaveRangeM: [0.4, 0.9],
     maxSafeWaveM: 1.2,
-    beginnerTip: '警戒心の強い魚なので、快晴ベタ凪よりも「曇り・適度な波気・ほんのり笹濁り」の日中にも好機があります！',
+    beginnerTip:
+      '警戒心の強い魚なので、快晴ベタ凪よりも「曇り・適度な波気・ほんのり笹濁り」がある日中に好機が生まれます。',
   },
 
   rockfish: {
@@ -115,7 +118,8 @@ export const FISH_SCORING_CONFIG: Record<FishGenreId, FishGenreConfig> = {
     penaltyWindMs: 4.0,
     idealWaveRangeM: [0.05, 0.55],
     maxSafeWaveM: 1.0,
-    beginnerTip: '軽い仕掛けを繊細に操るため「風の弱さ」が超重要！昼の干潮はテトラ・際での穴釣り、夜の満潮はメバル浮上が狙い目。',
+    beginnerTip:
+      '軽量リグを繊細に操作するため、風の弱さが重要です。日中の干潮前後はテトラや壁際の穴釣り、夜の満潮前後はメバルの浮上が狙い目です。',
   },
 
   tachiuo: {
@@ -134,7 +138,8 @@ export const FISH_SCORING_CONFIG: Record<FishGenreId, FishGenreConfig> = {
     penaltyWindMs: 5.0,
     idealWaveRangeM: [0.1, 0.65],
     maxSafeWaveM: 1.1,
-    beginnerTip: '夕マズメの一瞬の時合い〜夜前半、そして夜明け前が勝負！新月周りの暗い夜はベイトとタチウオが接岸しやすくなります。',
+    beginnerTip:
+      '夕マズメの時合いから夜前半、そして夜明け前が勝負です。新月周りの暗い夜はベイトとタチウオが接岸しやすくなります。',
   },
 
   aoriika: {
@@ -153,7 +158,8 @@ export const FISH_SCORING_CONFIG: Record<FishGenreId, FishGenreConfig> = {
     penaltyWindMs: 4.0,
     idealWaveRangeM: [0.1, 0.6],
     maxSafeWaveM: 1.0,
-    beginnerTip: 'エギングは横風・向かい風と「大雨後の真水（水潮）」が大敵！微風の朝夕マズメや潮の動き出し・止まりかけを狙い撃とう。',
+    beginnerTip:
+      'エギングは横風・向かい風と大雨後の水潮（真水）が大敵です。微風の朝夕マズメや、潮の動き出し・止まりかけを重点的に狙いましょう。',
   },
 };
 

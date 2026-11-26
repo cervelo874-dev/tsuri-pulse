@@ -34,7 +34,7 @@ export function smallestAngleDiff(a: number, b: number): number {
 
 export interface WindJudgment {
   relation: WindRelation;
-  /** 表示ラベル: 追い風◎ / 横風△ / 向かい風✕ / 微風◎ */
+  /** 表示ラベル: 追い風 ◎ / 追い風・強め △ / 横風 △ / 向かい風 ✕ / 強風警戒 ✕ 等 */
   badgeLabel: string;
   shortStatus: '◎' | '△' | '✕';
   description: string;
@@ -46,7 +46,8 @@ export interface WindJudgment {
 
 /**
  * スポットの「海の方角 (seaDirectionDeg: 堤防から海を見る向き)」と
- * 気象の「風向 (windFromDeg: 風が吹いてくる方角)」を比較して追い風・横風・向かい風を判定
+ * 気象の「風向 (windFromDeg: 風が吹いてくる方角)」および「風速 (m/s)」から
+ * 風向き判定・注意度バッジ（6.0m/s以上で△注意、9.0m/s以上で✕警戒）と自然な解説文を返す
  */
 export function evaluateWindRelation(
   windFromDeg: number,
@@ -58,42 +59,118 @@ export function evaluateWindRelation(
   const windFromLabel = `${degToCompassJa(windFromDeg)}の風`;
   const seaFacingLabel = `${degToCompassJa(seaDirectionDeg)}向き`;
 
-  if (windSpeedMs < 1.4) {
+  const baseRelation: WindRelation =
+    windSpeedMs < 1.4
+      ? 'calm'
+      : diff <= 52
+      ? 'tailwind'
+      : diff >= 128
+      ? 'headwind'
+      : 'crosswind';
+
+  // 1. 安全ブレーカー基準（9.0m/s以上）：風向きに関わらず赤色の強風警戒（✕）
+  if (windSpeedMs >= 9.0) {
     return {
-      relation: 'calm',
-      badgeLabel: '微風・凪 ◎',
-      shortStatus: '◎',
-      description: 'ほぼ無風〜そよ風で糸ふけが少なく、初心者でもとても釣りやすい状態！',
+      relation: baseRelation,
+      badgeLabel: '強風警戒 ✕',
+      shortStatus: '✕',
+      description:
+        '安全基準を超える非常に強い風です。突風で体勢を崩したりタックルが飛ばされたりする危険があるため、無理な釣行は控えましょう。',
       windBlowingToDeg,
       windFromLabel,
       seaFacingLabel,
     };
   }
 
-  if (diff <= 52) {
+  // 2. 微風・凪（1.4m/s未満）
+  if (baseRelation === 'calm') {
+    return {
+      relation: 'calm',
+      badgeLabel: '微風・凪 ◎',
+      shortStatus: '◎',
+      description:
+        'ほぼ無風〜そよ風の穏やかな状況です。糸ふけが出にくく、繊細なアタリもしっかり捉えられます。',
+      windBlowingToDeg,
+      windFromLabel,
+      seaFacingLabel,
+    };
+  }
+
+  // 3. 追い風（背中から海へ向かって吹く風）
+  if (baseRelation === 'tailwind') {
+    if (windSpeedMs >= 6.0) {
+      return {
+        relation: 'tailwind',
+        badgeLabel: '追い風・強め △',
+        shortStatus: '△',
+        description:
+          '背中からの追い風ですが、風速が強めです。突風で帽子や軽量タックルが飛ばされないよう注意し、足元にも気をつけましょう。',
+        windBlowingToDeg,
+        windFromLabel,
+        seaFacingLabel,
+      };
+    }
+
     return {
       relation: 'tailwind',
       badgeLabel: '追い風 ◎',
       shortStatus: '◎',
       description:
-        windSpeedMs <= 5.5
-          ? '背中から海へ吹く追い風！仕掛けがよく飛び、足元の海面も穏やかになりやすい好条件。'
-          : '追い風ですが風速が強めです。足場や帽子・軽量タックルの突風に注意しましょう。',
+        '背中から海へ向かって吹く追い風です。仕掛けやルアーの飛距離が伸びやすく、足元の海面も落ち着きやすい好条件です。',
       windBlowingToDeg,
       windFromLabel,
       seaFacingLabel,
     };
   }
 
-  if (diff >= 128) {
+  // 4. 向かい風（海から正面へ吹きつける風）
+  if (baseRelation === 'headwind') {
+    if (windSpeedMs >= 6.0) {
+      return {
+        relation: 'headwind',
+        badgeLabel: '向かい風・強風 ✕',
+        shortStatus: '✕',
+        description:
+          '正面から強い風が吹きつけています。仕掛けが押し戻されやすく波しぶきも被りやすいため、風裏ポイントへの移動も検討しましょう。',
+        windBlowingToDeg,
+        windFromLabel,
+        seaFacingLabel,
+      };
+    }
+
+    if (windSpeedMs >= 4.0) {
+      return {
+        relation: 'headwind',
+        badgeLabel: '向かい風 ✕',
+        shortStatus: '✕',
+        description:
+          '海から正面に吹きつける向かい風です。仕掛けが戻されやすいため、少し重めのオモリやルアーを選ぶとキャストしやすくなります。',
+        windBlowingToDeg,
+        windFromLabel,
+        seaFacingLabel,
+      };
+    }
+
     return {
       relation: 'headwind',
       badgeLabel: '向かい風 ✕',
       shortStatus: '✕',
       description:
-        windSpeedMs >= 4.5
-          ? '海から正面に吹きつける向かい風。仕掛けが押し戻されやすく、波しぶきにも注意！'
-          : '正面からの向かい風です。少し重めのオモリ・ルアーを使うと投げやすくなります。',
+        '正面からの向かい風ですが、風速はまだ控えめです。やや重めの仕掛けを使うと飛距離を保ちやすくなります。',
+      windBlowingToDeg,
+      windFromLabel,
+      seaFacingLabel,
+    };
+  }
+
+  // 5. 横風（左右から吹き抜ける風）
+  if (windSpeedMs >= 6.0) {
+    return {
+      relation: 'crosswind',
+      badgeLabel: '横風・強め △',
+      shortStatus: '△',
+      description:
+        '横からの風が強く、大きな糸ふけが出やすい状況です。オモリを重めにし、突風で道具が飛ばされないよう注意しましょう。',
       windBlowingToDeg,
       windFromLabel,
       seaFacingLabel,
@@ -105,7 +182,7 @@ export function evaluateWindRelation(
     badgeLabel: '横風 △',
     shortStatus: '△',
     description:
-      '横から風が当たるため、道糸が膨らむ「糸ふけ」が出やすい状態。竿先を海面に近づけるとアタリが取りやすいよ！',
+      '横から風が当たるため、道糸が膨らむ「糸ふけ」が出やすい状況です。ティップ（竿先）を水面に近づけるとアタリを取りやすくなります。',
     windBlowingToDeg,
     windFromLabel,
     seaFacingLabel,

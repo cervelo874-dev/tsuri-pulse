@@ -763,7 +763,7 @@ export function evaluateHourlyFishScore(
     });
   }
 
-  // ソナまるの表情判定（仕様4準拠）
+  // ソナまるの表情判定（全8表情対応：警戒・爆釣・マズメ点火・おやすみ・通常）
   let sonamaruMood: SonamaruMood = 'normal';
   if (
     safetyWarning ||
@@ -773,6 +773,10 @@ export function evaluateHourlyFishScore(
     sonamaruMood = 'caution';
   } else if (finalScore >= 80) {
     sonamaruMood = 'excited';
+  } else if ((tc.isMorningMazume || tc.isEveningMazume) && finalScore >= 62) {
+    sonamaruMood = 'mazume';
+  } else if (finalScore <= 44) {
+    sonamaruMood = 'sleepy';
   } else {
     sonamaruMood = 'normal';
   }
@@ -788,12 +792,14 @@ export function evaluateHourlyFishScore(
         : `ピピッ☔ 雨が降りそうだよ！レインウェアと足元の滑り止めで安全対策してね！`;
   } else if (finalScore >= 80) {
     sonamaruComment = `ピピッ✨ 激アツ${finalScore}点！${topReasons[0].label}で${cfg.shortName}の大チャンスだよっ！`;
+  } else if (sonamaruMood === 'mazume') {
+    sonamaruComment = `ピピッ🔥 マズメの時合い突入！${topReasons[0].label}で集中タイムだよっ！`;
   } else if (finalScore >= 65) {
     sonamaruComment = `ピピッ♪ ${topReasons[0].label}で好調だよ！時合いを逃さず狙ってみようっ！`;
   } else if (finalScore >= 45) {
-    sonamaruComment = `ピピッ！今は${tide.state}で落ち着き気味かな。ベストタイムに合わせて準備しよう！`;
+    sonamaruComment = `ピピッ！この時間は${tide.state}で落ち着き気味かな。タイドグラフで狙い目時間も見てみてね！`;
   } else {
-    sonamaruComment = `ピピッ…この時間は${topReasons[0].label}でちょっと渋め。他魚種か時間帯変更がおすすめだよ！`;
+    sonamaruComment = `ピピッ💤 今は${topReasons[0].label}でお魚もお休みモード…好調な他魚種か別時間をチェックしよう〜`;
   }
 
   // 初心者通訳パネルのテキスト構築

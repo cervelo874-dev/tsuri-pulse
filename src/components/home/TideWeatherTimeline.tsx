@@ -119,8 +119,8 @@ export default function TideWeatherTimeline() {
     dailyWeather.hourly[selectedHour]?.seaSurfaceTempC ??
     dailyWeather.meanSeaSurfaceTempC;
 
-  // 2時間刻みの見やすい気象タイムライン列（タップでも全24時間の該当時刻へ連動）
-  const timelineHours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+  // 0時〜23時の全24時間を1時間単位でワンタップ選択可能な横スクロールレールにする
+  const timelineHours = Array.from({ length: 24 }, (_, idx) => idx);
 
   return (
     <section
@@ -377,25 +377,26 @@ export default function TideWeatherTimeline() {
         </svg>
       </div>
 
-      {/* 縦に揃えた気象タイムライン（2時間刻み12列＋ワンタップ時刻切替） */}
-      <div className="grid grid-cols-6 sm:grid-cols-12 gap-1 pt-1">
+      {/* 1時間ごとの気象・得点タイムライン（タップするとその時間の得点＆魚種ランキングへ一括反映） */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-1">
         {timelineHours.map((h) => {
           const wx = dailyWeather.hourly[h] ?? dailyWeather.hourly[0];
           const sc = currentGenreEval.hourlyScores[h]?.total ?? 0;
           const isNight =
             h < Math.floor(dailyWeather.sunriseHour) ||
             h > Math.ceil(dailyWeather.sunsetHour);
-          const isSelected = Math.abs(selectedHour - h) <= 0 || selectedHour === h + 1;
+          const isSelected = selectedHour === h;
           const windBlowTo = (wx.windDirectionDeg + 180) % 360;
 
           return (
             <button
               key={h}
+              id={`timeline-hour-${h}`}
               type="button"
               onClick={() => setSelectedHour(h, true)}
-              className={`rounded-2xl py-2 px-1 flex flex-col items-center gap-1 transition-all ${
+              className={`min-w-[46px] shrink-0 rounded-2xl py-2 px-1.5 flex flex-col items-center gap-1 transition-all active:scale-95 ${
                 isSelected
-                  ? 'glow-button-cyan scale-[1.03]'
+                  ? 'glow-button-cyan scale-[1.04]'
                   : 'glass-pill opacity-85 hover:opacity-100'
               }`}
             >

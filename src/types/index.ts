@@ -15,7 +15,10 @@ export type SonamaruMood =
   | 'excited'
   | 'caution'
   | 'analyzing'
-  | 'celebration';
+  | 'celebration'
+  | 'sleepy'
+  | 'mazume'
+  | 'checklist';
 
 export type TideName = '大潮' | '中潮' | '小潮' | '長潮' | '若潮';
 

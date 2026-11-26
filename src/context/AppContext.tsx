@@ -8,6 +8,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { FISH_GENRE_LIST } from '@/config/fishScoringConfig';
 import { DEFAULT_GENRE_GEAR } from '@/config/gearPresets';
 import { INITIAL_PRESET_SPOTS } from '@/config/presetSpots';
 import { evaluateAllGenresForDay } from '@/lib/scoringEngine';
@@ -76,7 +77,7 @@ interface AppContextValue {
 
   selectedHour: number;
   setSelectedHour: (hour: number, isManual?: boolean) => void;
-  jumpToCurrentHour: () => void;
+  jumpToPeakHour: () => void;
   resetToAutoHour: () => void;
   isManualHour: boolean;
 
@@ -87,6 +88,8 @@ interface AppContextValue {
   dailyWeather: DailyWeatherForecast;
   dailyTide: DailyTideData;
   genreEvaluations: Record<FishGenreId, DailyFishEvaluation>;
+  /** 選択中の時刻（デフォルト＝現在時刻、タイドグラフ操作時はその時刻）における6魚種TOP3ランキング */
+  hourlyRankMap: Record<FishGenreId, 1 | 2 | 3 | null>;
   currentGenreEval: DailyFishEvaluation;
   currentHourScore: HourlyFishScore;
 
@@ -122,6 +125,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [dayIndex, setDayIndexState] = useState<number>(0);
   const [selectedGenre, setSelectedGenreState] = useState<FishGenreId>('sabiki');
+  // SSR初期値は6時、クライアントマウント直後に「現在のJST時刻」へ自動セット
   const [selectedHourState, setSelectedHourState] = useState<number>(6);
   const [isManualHour, setIsManualHour] = useState<boolean>(false);
 
@@ -140,7 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [catchLogs, setCatchLogs] = useState<CatchLogEntry[]>([]);
   const [celebrationTrigger, setCelebrationTrigger] = useState<number>(0);
 
-  // 初期マウント時にLocalStorage & IndexedDBを非同期読み込み
+  // 初期マウント時に「現在のJST時刻」およびLocalStorage & IndexedDBを読み込み
   useEffect(() => {
     let active = true;
     loadAllPhotosFromIdb().then((photoMap) => {
@@ -150,6 +154,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const loadedGear = loadGearState();
       const loadedWxGear = loadWeatherGearChecked();
       const loadedLogs = loadCatchLogsMeta();
+
+      // デフォルトでは「現在の時刻」を表示
+      setSelectedHourState(getCurrentJstHour());
+      setIsManualHour(false);
 
       setSettings(loadedSettings);
       setMySpots(loadedSpots);
@@ -231,13 +239,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const selectSpot = useCallback((spot: FishingSpot) => {
     setActiveSpot(spot);
-    setIsManualHour(false);
   }, []);
 
+  // 魚種タブを切り替えても選択中の時刻（現在時刻 or タイドグラフ選択時刻）はそのまま維持する
   const setSelectedGenre = useCallback((genre: FishGenreId) => {
     setSelectedGenreState(genre);
-    // 魚種タブをクリックした際は、タブに表示されている最高スコア時刻へ自動フォーカスし数値を一致させる
-    setIsManualHour(false);
   }, []);
 
   const saveSpotToMySpots = useCallback((spot: FishingSpot) => {
@@ -251,7 +257,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     setActiveSpot(spot);
-    setIsManualHour(false);
   }, []);
 
   const updateSpotSeaDirection = useCallback((spotId: string, seaDirectionDeg: number) => {
@@ -302,7 +307,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setDayIndex = useCallback((idx: number) => {
     setDayIndexState(idx);
-    setIsManualHour(false);
+    if (idx === 0) {
+      setSelectedHourState(getCurrentJstHour());
+      setIsManualHour(false);
+    }
   }, []);
 
   const setSelectedHour = useCallback((hour: number, isManual = true) => {
@@ -311,22 +319,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsManualHour(isManual);
   }, []);
 
-  const jumpToCurrentHour = useCallback(() => {
-    setSelectedHourState(getCurrentJstHour());
+  const jumpToPeakHour = useCallback(() => {
+    setSelectedHourState(currentGenreEval.peakHour);
     setIsManualHour(true);
-  }, []);
+  }, [currentGenreEval.peakHour]);
 
   const resetToAutoHour = useCallback(() => {
+    setSelectedHourState(getCurrentJstHour());
     setIsManualHour(false);
   }, []);
 
-  // 初期表示および魚種タブ選択時(!isManualHour)は当該魚種の最高スコア時刻を返すことでタブ数値と完全一致させる
-  const effectiveHour = isManualHour
-    ? selectedHourState
-    : currentGenreEval.peakHour;
+  // 表示中の時刻における全6魚種のリアルタイムランキング（65点以上の上位3魚種に 1 / 2 / 3 を付与）
+  const hourlyRankMap = useMemo(() => {
+    const map: Record<FishGenreId, 1 | 2 | 3 | null> = {
+      sabiki: null,
+      bluefish: null,
+      chinu: null,
+      rockfish: null,
+      tachiuo: null,
+      aoriika: null,
+    };
+
+    const ranked = FISH_GENRE_LIST.map((cfg) => ({
+      id: cfg.id,
+      score:
+        genreEvaluations[cfg.id]?.hourlyScores[selectedHourState]?.total ?? 0,
+    }))
+      .filter((item) => item.score >= 65)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    ranked.forEach((item, idx) => {
+      map[item.id] = (idx + 1) as 1 | 2 | 3;
+    });
+
+    return map;
+  }, [genreEvaluations, selectedHourState]);
 
   const currentHourScore =
-    currentGenreEval.hourlyScores[effectiveHour] ?? currentGenreEval.hourlyScores[0];
+    currentGenreEval.hourlyScores[selectedHourState] ??
+    currentGenreEval.hourlyScores[0];
 
   // =====================================================
   // 持ち物アクション
@@ -482,9 +514,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDayIndex,
     selectedGenre,
     setSelectedGenre,
-    selectedHour: effectiveHour,
+    selectedHour: selectedHourState,
     setSelectedHour,
-    jumpToCurrentHour,
+    jumpToPeakHour,
     resetToAutoHour,
     isManualHour,
     isLoadingForecast,
@@ -493,6 +525,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dailyWeather,
     dailyTide,
     genreEvaluations,
+    hourlyRankMap,
     currentGenreEval,
     currentHourScore,
     gearState,

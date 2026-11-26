@@ -253,11 +253,22 @@ export default function GearView() {
         </button>
       </div>
 
-      {/* 上部：ソナまるのミニアドバイス */}
+      {/* 上部：ソナまるのミニアドバイス（準備チェック敬礼モード／全完了でお祝いモード） */}
       <div className="flex items-center gap-3">
-        <Sonamaru mood={currentHourScore.sonamaruMood} size="sm" />
+        <Sonamaru
+          mood={
+            currentHourScore.safetyWarning
+              ? 'caution'
+              : totalCount > 0 && checkedCount === totalCount
+              ? 'celebration'
+              : 'checklist'
+          }
+          size="sm"
+        />
         <div className="flex-1 glass-panel rounded-2xl p-3 text-xs font-bold leading-relaxed">
-          {sonamaruAdvice}
+          {totalCount > 0 && checkedCount === totalCount
+            ? 'ピピッ🎉 持ち物チェック100%コンプリート！忘れ物ゼロで気をつけていってらっしゃいっ！'
+            : sonamaruAdvice}
         </div>
       </div>
 

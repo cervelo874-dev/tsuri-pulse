@@ -6,6 +6,7 @@ import {
   Award,
   ChevronDown,
   Clock,
+  Flame,
   HelpCircle,
   RotateCcw,
   Sparkles,
@@ -19,17 +20,18 @@ interface SonarRadarCardProps {
 }
 
 /**
- * 結論エリア：左に発光ソナーレーダーゲージ＋ベストタイム、右にソナまる＋吹き出し＋AI作戦会議ボタン
- * レーダー/スコア領域タップで「初心者通訳パネル」がすりガラス展開する
+ * 結論エリア：左に発光ソナーレーダーゲージ（デフォルト現在時刻／タイドグラフ指定時刻の得点＆順位と完全連動）
+ * 右にソナまる（8表情透過PNG）＋吹き出し＋AI作戦会議ボタン
  */
 export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) {
   const {
     selectedGenre,
     selectedHour,
-    jumpToCurrentHour,
+    jumpToPeakHour,
     isManualHour,
     resetToAutoHour,
     isLoadingForecast,
+    hourlyRankMap,
     currentGenreEval,
     currentHourScore,
   } = useApp();
@@ -39,7 +41,7 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
   const cfg = FISH_SCORING_CONFIG[selectedGenre];
   const score = currentHourScore.total;
   const bestWindow = currentGenreEval.bestWindow;
-  const rankBadge = currentGenreEval.topRankBadge;
+  const rankBadge = hourlyRankMap[selectedGenre];
 
   // 半円ソナーゲージ (180度: 左端-90°〜右端+90°) の角度算出
   const sweepAngleDeg = (score / 100) * 180;
@@ -78,7 +80,7 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
           }}
           className="col-span-7 glass-panel rounded-3xl p-3.5 relative flex flex-col items-center justify-between cursor-pointer transition-all hover:border-cyan-300/60 active:scale-[0.99]"
         >
-          {/* TOP3リボンバッジ */}
+          {/* 表示中時刻のTOP3リボンバッジ（上部タブの順位バッジと完全同期） */}
           {rankBadge !== null && (
             <div
               className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 shadow"
@@ -86,16 +88,18 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 background:
                   rankBadge === 1
                     ? 'linear-gradient(135deg, #fde047, #f59e0b)'
-                    : 'linear-gradient(135deg, #67e8f9, #0284c7)',
+                    : rankBadge === 2
+                    ? 'linear-gradient(135deg, #67e8f9, #0284c7)'
+                    : 'linear-gradient(135deg, #fdba74, #d97706)',
                 color: '#041529',
               }}
             >
               <Award className="w-3 h-3" />
-              <span>狙い目 {rankBadge}位</span>
+              <span>いま {rankBadge}位</span>
             </div>
           )}
 
-          {/* 時刻インジケーター（初期＆タブ選択時は最高スコア時刻を表示、なぞり時は選択時刻を明示） */}
+          {/* 時刻インジケーター（デフォルト＝現在時刻、タイドグラフ操作時＝選択時刻） */}
           <div className="w-full flex items-center justify-end gap-1 text-[10px] font-bold">
             <span
               className={`px-2 py-0.5 rounded-full ${
@@ -105,8 +109,8 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
               }`}
             >
               {isManualHour
-                ? `🕒 ${String(selectedHour).padStart(2, '0')}:00 時点`
-                : `🔥 最高時(${String(selectedHour).padStart(2, '0')}:00)`}
+                ? `📍 ${String(selectedHour).padStart(2, '0')}:00 選択中`
+                : `🕒 現在 ${String(selectedHour).padStart(2, '0')}:00`}
             </span>
           </div>
 
@@ -120,7 +124,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 </radialGradient>
               </defs>
 
-              {/* 同心半円グリッド */}
               {[26, 49, 72].map((rad) => (
                 <path
                   key={rad}
@@ -131,7 +134,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 />
               ))}
 
-              {/* 放射線グリッド */}
               {[30, 60, 90, 120, 150].map((deg) => {
                 const radAngle = (deg * Math.PI) / 180;
                 const lx = cx + r * Math.cos(radAngle);
@@ -159,7 +161,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 strokeWidth="1.4"
               />
 
-              {/* スコアに応じたソナー扇形スイープ */}
               {score > 0 && (
                 <path
                   d={`M ${cx} ${cy} L ${cx - r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${xEnd} ${yEnd} Z`}
@@ -167,7 +168,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 />
               )}
 
-              {/* 外周プログレス発光アーク */}
               {score > 0 && (
                 <path
                   d={`M ${cx - r} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${xEnd} ${yEnd}`}
@@ -179,7 +179,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 />
               )}
 
-              {/* スイープ先端の発光ビームライン */}
               <line
                 x1={cx}
                 y1={cy}
@@ -207,7 +206,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 <span className="text-sm font-extrabold opacity-85">点</span>
               </div>
 
-              {/* 補助ラベル（根魚の「穴釣り◎ / メバル◎」や安全警告） */}
               <div className="flex items-center justify-center gap-1 mt-0.5 min-h-[18px]">
                 {currentHourScore.safetyWarning ? (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/25 text-rose-300 border border-rose-400/50 flex items-center gap-1">
@@ -215,27 +213,33 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                     安全ブレーカー作動
                   </span>
                 ) : currentHourScore.auxiliaryBadge ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 border border-emerald-400/50"
+                  <span
+                    className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 border border-emerald-400/50"
                     style={{ color: 'var(--accent-emerald)' }}
                   >
                     {currentHourScore.auxiliaryBadge}
                   </span>
                 ) : (
                   <span className="text-[11px] font-bold opacity-75">
-                    {isManualHour
-                      ? `${cfg.shortName}（最高${currentGenreEval.peakScore}点）`
-                      : `${cfg.shortName}・当日ピーク`}
+                    {cfg.shortName}（本日最高 {currentGenreEval.peakScore}点）
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* 今日のベストタイム表示 */}
-          <div className="w-full mt-2 pt-2 border-t border-cyan-400/20 text-center">
+          {/* 今日のベストタイム表示（タップでベスト時刻へジャンプ可） */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              jumpToPeakHour();
+            }}
+            title="タップするとこのベスト時間のスコア・ランキングを表示します"
+            className="w-full mt-2 pt-2 border-t border-cyan-400/20 text-center rounded-xl hover:bg-cyan-500/10 transition py-0.5"
+          >
             <div className="text-[10px] font-bold opacity-75 flex items-center justify-center gap-1">
               <Clock className="w-3 h-3" style={{ color: 'var(--accent-cyan)' }} />
-              <span>おすすめの時間</span>
+              <span>おすすめの時間（タップで表示）</span>
             </div>
             <div className="text-sm font-black tracking-tight mt-0.5">
               {bestWindow.label}
@@ -259,10 +263,8 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
 
         {/* 右側: ソナまる＋1〜2行吹き出し＋AI作戦会議ボタン */}
         <div className="col-span-5 flex flex-col justify-between items-center gap-2">
-          {/* 吹き出し */}
           <div className="relative w-full glass-panel rounded-2xl p-2.5 text-[11px] font-bold leading-snug">
             <p className="line-clamp-3">{currentHourScore.sonamaruComment}</p>
-            {/* 吹き出しのしっぽ */}
             <span
               className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b"
               style={{
@@ -272,12 +274,10 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             />
           </div>
 
-          {/* ソナまる本体 */}
           <div className="my-0.5">
             <Sonamaru mood={effectiveMood} size="md" />
           </div>
 
-          {/* AI作戦会議ボタン ＋ 現在時刻/最高スコア切替 */}
           <div className="w-full space-y-1.5">
             <button
               id="ai-strategy-btn"
@@ -296,16 +296,18 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
                 className="w-full glass-pill py-1.5 px-2 rounded-full text-[10px] font-bold flex items-center justify-center gap-1 opacity-90 hover:opacity-100"
               >
                 <RotateCcw className="w-3 h-3" />
-                <span>最高スコア({currentGenreEval.peakScore}点)へ戻す</span>
+                <span>現在の時刻へ戻す</span>
               </button>
             ) : (
               <button
                 type="button"
-                onClick={jumpToCurrentHour}
+                onClick={jumpToPeakHour}
                 className="w-full glass-pill py-1.5 px-2 rounded-full text-[10px] font-bold flex items-center justify-center gap-1 opacity-85 hover:opacity-100"
               >
-                <Clock className="w-3 h-3" />
-                <span>いま現在の時刻を見る</span>
+                <Flame className="w-3 h-3 text-amber-400" />
+                <span>
+                  ベスト({String(currentGenreEval.peakHour).padStart(2, '0')}時/{currentGenreEval.peakScore}点)を見る
+                </span>
               </button>
             )}
           </div>
@@ -329,7 +331,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             {currentHourScore.translation.headline}
           </p>
 
-          {/* 理由タグチップ */}
           <div className="flex flex-wrap gap-1.5">
             {currentHourScore.reasonTags.map((tag, idx) => (
               <span
@@ -347,7 +348,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             ))}
           </div>
 
-          {/* 4要素の配点ゲージ */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             {[
               {
@@ -399,7 +399,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             })}
           </div>
 
-          {/* 専門用語の噛み砕き解説 */}
           <div className="space-y-2 text-xs leading-relaxed">
             <div>
               <span className="font-extrabold" style={{ color: 'var(--accent-cyan)' }}>
@@ -427,7 +426,6 @@ export default function SonarRadarCard({ onOpenStrategy }: SonarRadarCardProps) 
             </div>
           </div>
 
-          {/* 次の一手 */}
           <div className="rounded-2xl p-3 border border-cyan-400/40 bg-cyan-500/10 text-xs">
             <div className="font-extrabold mb-0.5" style={{ color: 'var(--accent-gold)' }}>
               💡 ソナまるからの「次の一手」

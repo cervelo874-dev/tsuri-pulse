@@ -28,26 +28,33 @@ function FishGenreSilhouette({ genreId, color }: { genreId: FishGenreId; color: 
 }
 
 /**
- * 6ジャンル横スクロール魚種タブ
- * - 当日ピークスコア 80点以上: ネオンゴールド枠 / 65〜79点: ネオンシアン枠 / 64点以下: 通常クリア枠
- * - 65点以上の狙い目上位3魚種に順位バッジ (1 / 2 / 3) を付与（全64点以下なら非表示）
+ * 6ジャンル横スクロール魚種タブ（選択中の時刻＝デフォルト現在時刻／タイドグラフ指定時刻に完全連動）
+ * - 表示時刻のスコア 80点以上: ネオンゴールド枠 / 65〜79点: ネオンシアン枠 / 64点以下: 通常クリア枠
+ * - 表示時刻で65点以上の狙い目上位3魚種に順位バッジ (1 / 2 / 3) をリアルタイム付与
  */
 export default function FishTabs() {
-  const { selectedGenre, setSelectedGenre, genreEvaluations } = useApp();
+  const {
+    selectedGenre,
+    setSelectedGenre,
+    selectedHour,
+    genreEvaluations,
+    hourlyRankMap,
+  } = useApp();
 
   return (
     <section aria-label="ターゲット魚種切替" className="pt-1">
       <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 px-1">
         {FISH_GENRE_LIST.map((cfg) => {
           const evalItem = genreEvaluations[cfg.id];
-          const peak = evalItem?.peakScore ?? 0;
-          const rank = evalItem?.topRankBadge ?? null;
+          const hourScore =
+            evalItem?.hourlyScores[selectedHour]?.total ?? 0;
+          const rank = hourlyRankMap[cfg.id] ?? null;
           const isSelected = selectedGenre === cfg.id;
 
           const glowClass =
-            peak >= 80
+            hourScore >= 80
               ? 'glow-gold'
-              : peak >= 65
+              : hourScore >= 65
               ? 'glow-cyan'
               : '';
 
@@ -70,11 +77,11 @@ export default function FishTabs() {
                   : 'glass-pill font-bold opacity-85 hover:opacity-100'
               } ${glowClass}`}
             >
-              {/* 狙い目TOP3順位バッジ（65点以上のみ表示） */}
+              {/* 選択中の時刻における狙い目TOP3順位バッジ（65点以上のみ表示） */}
               {rank !== null && (
                 <span
                   className={`absolute -top-2 -left-1 min-w-5 h-5 px-1 rounded-full text-[10px] font-black flex items-center justify-center shadow-md ${rankBg}`}
-                  title={`本日のおすすめ第${rank}位（最高${peak}点）`}
+                  title={`${String(selectedHour).padStart(2, '0')}:00時点のおすすめ第${rank}位（${hourScore}点）`}
                 >
                   {rank}
                 </span>
@@ -86,14 +93,14 @@ export default function FishTabs() {
                 className="text-[11px] font-black ml-0.5 opacity-95 whitespace-nowrap"
                 style={{
                   color:
-                    peak >= 80
+                    hourScore >= 80
                       ? 'var(--accent-gold)'
-                      : peak >= 65
+                      : hourScore >= 65
                       ? 'var(--accent-cyan)'
                       : 'var(--text-dim)',
                 }}
               >
-                {peak}点
+                {hourScore}点
               </span>
             </button>
           );
